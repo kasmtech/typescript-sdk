@@ -1,0 +1,46 @@
+{
+  "name": "@kasmweb/sdk",
+  "version": "0.1.186",
+  "description": "Kasm Workspaces API client for TypeScript, generated from the official OpenAPI spec",
+  "license": "Apache-2.0",
+  "keywords": [
+    "kasm",
+    "kasm-workspaces",
+    "api",
+    "sdk",
+    "openapi"
+  ],
+  "homepage": "https://github.com/kasmtech/typescript-sdk#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kasmtech/typescript-sdk.git"
+  },
+  "bugs": {
+    "url": "https://github.com/kasmtech/typescript-sdk/issues"
+  },
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "browser": {
+    "./dist/exec.js": "./dist/exec.browser.js"
+  },
+  "files": [
+    "dist",
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "tsc -p tsconfig.test.json && node --test build/test/*.test.js"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.0",
+    "typescript": "7.0.2"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  }
+}

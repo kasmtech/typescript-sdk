@@ -1,0 +1,78 @@
+# Publishes @kasmweb/sdk to npm when a release tag arrives. This repository
+# is published from kcli (sdk/typescript/ there), which pushes one commit and
+# one vX.Y.Z tag per release; nothing is developed here.
+#
+# npm trusted publishing: the npm environment's OIDC token is exchanged for a
+# short-lived publish token (npm 11.5.1 or later), so no npm credential is
+# stored anywhere, and the package carries a provenance statement naming
+# this repository, which package.json's repository field must match.
+name: publish
+
+on:
+  push:
+    tags: ["v[0-9]+.[0-9]+.[0-9]+"]
+
+permissions: {}
+
+env:
+  NPM_VERSION: "11.21.1"
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24"
+      - name: Tag matches the stamped version
+        run: |
+          set -euo pipefail
+          got="$(node -p 'require("./package.json").version')"
+          if [ "$got" != "${GITHUB_REF_NAME#v}" ]; then
+            echo "::error::tag $GITHUB_REF_NAME, but package.json says $got"
+            exit 1
+          fi
+      - name: Typecheck, test, build, pack
+        run: |
+          set -euo pipefail
+          npm ci --no-audit --no-fund
+          npm run typecheck
+          npm test
+          npm run build
+          mkdir -p ../pack && npm pack --pack-destination ../pack
+          mv ../pack pack
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: package
+          path: pack/*.tgz
+          if-no-files-found: error
+
+  publish:
+    needs: build
+    runs-on: ubuntu-24.04
+    environment:
+      name: npm
+      url: https://www.npmjs.com/package/@kasmweb/sdk
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      # The provenance statement is built from the checked-out package.json.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24"
+          registry-url: https://registry.npmjs.org
+      - run: npm install --global --no-audit --no-fund "npm@$NPM_VERSION"
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: package
+          path: pack/
+      - run: npm publish --access public --provenance pack/*.tgz
